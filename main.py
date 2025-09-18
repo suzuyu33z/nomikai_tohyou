@@ -109,27 +109,33 @@ elif st.session_state.game_state == 'voting':
         st.header("🎯 投票中")
         st.subheader(f"お題: {active_poll['question']}")
         
-        # 現在の結果をリアルタイム表示
-        yes_count, total_count = get_poll_results(active_poll['id'])
-        no_count = total_count - yes_count
+        # 投票済みチェック用のセッション状態
+        poll_vote_key = f"voted_poll_{active_poll['id']}"
         
-        # YESの数を目立つように表示
-        st.markdown(f"## 🎯 現在のYES: **{yes_count}人** ({total_count}人中)")
-        
-        # 投票ボタン
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.button(f"✅ YES ({yes_count})", type="primary", use_container_width=True):
-                if vote(active_poll['id'], True):
-                    st.success("投票完了！")
-                    st.rerun()
-        
-        with col2:
-            if st.button(f"❌ NO ({no_count})", use_container_width=True):
-                if vote(active_poll['id'], False):
-                    st.success("投票完了！")
-                    st.rerun()
+        if poll_vote_key in st.session_state:
+            # 既に投票済み
+            st.success("✅ 投票済みです！結果発表をお待ちください。")
+            st.info("お題の結果は「ゲーム終了」後に発表されます。")
+        else:
+            # まだ投票していない
+            st.info("あなたの回答をお選びください")
+            
+            # 投票ボタン
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("✅ YES", type="primary", use_container_width=True):
+                    if vote(active_poll['id'], True):
+                        st.session_state[poll_vote_key] = True  # 投票済みマーク
+                        st.success("投票完了！")
+                        st.rerun()
+            
+            with col2:
+                if st.button("❌ NO", use_container_width=True):
+                    if vote(active_poll['id'], False):
+                        st.session_state[poll_vote_key] = False  # 投票済みマーク
+                        st.success("投票完了！")
+                        st.rerun()
         
         st.markdown("---")
         
@@ -148,19 +154,20 @@ elif st.session_state.game_state == 'results':
         
         yes_count, total_count = get_poll_results(active_poll['id'])
         
-        # 結果表示
+        # 結果表示（ここで初めて人数が見える）
         st.markdown(f"""
-        ## 📊 結果
+        ## 🎉 結果発表！
         
-        **YESの人数**: {yes_count}人
-        **総投票数**: {total_count}人
+        ### 🎯 **YESを選んだ人: {yes_count}人**
+        ### 📊 総投票数: {total_count}人
+        ### 📈 YES率: {yes_count/total_count*100:.1f}%
         """)
         
         if yes_count > 0:
             st.balloons()
-            st.success(f"🎊 YESを選んだ人は {yes_count}人 です！")
+            st.success(f"🎊 YESを選んだ人は **{yes_count}人** でした！")
         else:
-            st.info("YESを選んだ人はいませんでした。")
+            st.info("🤔 YESを選んだ人はいませんでした。")
         
         # 進行ボタン
         col1, col2 = st.columns(2)
